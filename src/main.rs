@@ -33,7 +33,7 @@ impl AppState {
         AppState { provider }
     }
 
-    pub async fn call_contract(
+    pub async fn call_contract( // I need to return a dynamic json structure here, based on the function signature, e.g. function totalSupply() external view returns (uint256) - should return { "totalSupply": uint256 }
         &self,
         contract_address: &str,
         function_signature: &str,
@@ -60,25 +60,39 @@ impl AppState {
             .block(block)
             .call()
             .await?;
-
+        println!("Result: {:?}", result);
         Ok(result.to_string())
     }
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let app_state = AppState::new().await;
+#[post("/call_contract", format = "application/json", data = "<request>")]
+async fn call_contract(
+    state: &State<Mutex<AppState>>,
+    request: Json<ContractCallRequest>,
+) -> Result<String, String> {
+    println!("Request: {:?}", request);
+    let state = state.lock().await;
 
-    let contract_address = "0x6982508145454Ce325dDbE47a25d4ec3d2311933";
-    let function_signature = "function totalSupply() external view returns (uint256)";
+    match state
+        .call_contract(
+            &request.contract_address,
+            &request.function_signature,
+            request.block_number,
+        )
+        .await{
+            Ok(result) => Ok(serde_json::to_string(&result).unwrap()),
+            Err(err) => Err(format!("Error: {}", err)),
+        }
+}
 
-    match app_state
-        .call_contract(contract_address, function_signature, None)
+#[rocket::main]
+async fn main() {
+    let state = AppState::new().await;
+
+    rocket::build()
+        .manage(Mutex::new(state))
+        .mount("/", routes![call_contract])
+        .launch()
         .await
-    {
-        Ok(result) => println!("Result: {}", result),
-        Err(err) => eprintln!("Error: {}", err),
-    }
-
-    Ok(())
+        .expect("Failed to launch the server");
 }
