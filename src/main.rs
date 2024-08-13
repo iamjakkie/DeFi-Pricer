@@ -2,6 +2,7 @@
 extern crate rocket;
 
 use abi::AbiParser;
+use anyhow::{anyhow, Result};
 use ethers::prelude::*;
 use ethers::providers::{Http, Provider};
 use ethers::types::Address;
@@ -12,16 +13,18 @@ use std::env;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-#[derive(Debug, Deserialize, Serialize)]
-struct ContractCallRequest {
-    contract_address: String,
-    function_signature: String,
-    block_number: Option<u64>,
+use DeFi_Pricer::ContractCallRequest;
+
+struct ContractCallResponse {
+    
 }
 
 struct AppState {
     provider: Arc<Provider<Http>>,
 }
+
+// Type -> Map<bytes4, ABI / Contract>
+// function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)
 
 impl AppState {
     pub async fn new() -> Self {
@@ -38,7 +41,7 @@ impl AppState {
         contract_address: &str,
         function_signature: &str,
         block_number: Option<u64>,
-    ) -> Result<String, Box<dyn std::error::Error>> {
+    ) -> Result<String> {
         let address: Address = contract_address.parse()?;
         let block = match block_number {
             Some(block_number) => BlockId::Number(block_number.into()),
@@ -49,19 +52,21 @@ impl AppState {
 
         let abi = AbiParser::default()
             .parse_str(&abi)
-            .expect("Failed to parse function signature");
+            .map_err(|e| anyhow!("Failed to parse function signature: {:?}", e))?;
         let function = abi
             .functions()
             .next()
-            .expect("No functions found in the ABI");
+            .ok_or(anyhow!("No functions found in the ABI"))?;
         let contract = Contract::new(address, abi.clone(), self.provider.clone());
         let result = contract
-            .method::<_, U256>(function.name.as_str(), ())?
+            .method::<_, (U256, U256)>(function.name.as_str(), ())?
             .block(block)
             .call()
             .await?;
         println!("Result: {:?}", result);
-        Ok(result.to_string())
+
+        let result = format!("{:?}", result);
+        Ok(result)
     }
 }
 
@@ -80,10 +85,36 @@ async fn call_contract(
             request.block_number,
         )
         .await{
-            Ok(result) => Ok(serde_json::to_string(&result).unwrap()),
-            Err(err) => Err(format!("Error: {}", err)),
+            Ok(result) => {
+                println!("Got result! {:?}", result);
+
+                Ok(serde_json::to_string(&result).unwrap())
+            },
+            Err(err) => {
+                println!("Got err: {:?}", err);
+
+                Err(format!("Error: {}", err))
+            },
         }
 }
+
+#[get("/hello-world")]
+async fn hello_world() -> Result<String, String> {
+    println!("Hello world!");
+    Ok("boo!".to_string())
+}
+
+// headers = {
+//     "Content-Type": "application/json",
+// }
+
+// body = {
+//     "contract_address": "0xA43fe16908251ee70EF74718545e4FE6C5cCEc9f",
+//     "function_signature": "function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)"
+// }
+
+
+// 'Error: Expected `U256`, got Tuple([Uint(2226262424639007986121597746328), Uint(7052167907527757790769), Uint(1722970811)])'
 
 #[rocket::main]
 async fn main() {
@@ -91,7 +122,7 @@ async fn main() {
 
     rocket::build()
         .manage(Mutex::new(state))
-        .mount("/", routes![call_contract])
+        .mount("/", routes![call_contract, hello_world])
         .launch()
         .await
         .expect("Failed to launch the server");
