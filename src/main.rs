@@ -104,6 +104,30 @@ async fn hello_world() -> Result<String, String> {
     Ok("boo!".to_string())
 }
 
+#[post("/add_token")]
+async fn add_token() -> Result<String, String> {
+    // this should add a token to a database with basic information
+    Ok("boo!".to_string())
+}
+
+#[post("/add_pair")]
+async fn add_pair() -> Result<String, String> {
+    // this should add a pair to a database with basic information
+    Ok("boo!".to_string())
+}
+
+#[post("/add_trade")]
+async fn add_trade() -> Result<String, String> {
+    // this should add a trade to a database
+    Ok("boo!".to_string())
+}
+
+#[post("/sync_pair")]
+async fn sync_pair() -> Result<String, String> {
+    // this function will get all historical price changes for a pair and store them in the database
+    Ok("boo!".to_string())
+}
+
 // headers = {
 //     "Content-Type": "application/json",
 // }
