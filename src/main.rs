@@ -98,12 +98,6 @@ async fn call_contract(
         }
 }
 
-#[get("/hello-world")]
-async fn hello_world() -> Result<String, String> {
-    println!("Hello world!");
-    Ok("boo!".to_string())
-}
-
 #[post("/add_token")]
 async fn add_token() -> Result<String, String> {
     // this should add a token to a database with basic information
