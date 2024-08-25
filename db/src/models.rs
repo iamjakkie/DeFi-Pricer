@@ -1,4 +1,4 @@
-use diesel::prelude::*;
+use diesel::{prelude::*};
 use rocket::serde::{Deserialize, Serialize};
 use std::cmp::{Ord, Eq, PartialOrd, PartialEq};
 use bigdecimal::BigDecimal;
@@ -15,7 +15,7 @@ pub struct Token {
     pub block: i32,
 }
 
-#[derive(Insertable, Debug)]
+#[derive(Debug, Serialize, Deserialize, Insertable)]
 #[diesel(table_name = tokens)]
 pub struct NewToken {
     pub name: String,

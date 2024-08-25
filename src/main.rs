@@ -111,7 +111,7 @@ pub fn add_token(post: Json<Token>) -> Result<Created<Json<Token>>, status::Cust
     let connection = &mut establish_connection_pg();
 
     let new_token = Token {
-        id: 0,
+        id: None,
         name: post.name.clone(),
         symbol: post.symbol.clone(),
         decimals: post.decimals,
