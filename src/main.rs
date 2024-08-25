@@ -15,6 +15,8 @@ use tokio::sync::Mutex;
 
 use DeFi_Pricer::ContractCallRequest;
 
+
+
 struct ContractCallResponse {
     
 }
@@ -98,10 +100,23 @@ async fn call_contract(
         }
 }
 
-#[post("/add_token")]
-async fn add_token() -> Result<String, String> {
-    // this should add a token to a database with basic information
-    Ok("boo!".to_string())
+#[post("/add_token", format = "json", data = "<post>")]
+pub fn create_post(post: Json<NewToken>) -> Result<Created<Json<NewPost>>> {
+
+    let connection = &mut establish_connection_pg();
+
+    let new_post = Post {
+        id: 1,
+        title: post.title.to_string(),
+        body: post.body.to_string(),
+        published: true,
+    };
+
+    diesel::insert_into(self::schema::posts::dsl::posts)
+        .values(&new_post)
+        .execute(connection)
+        .expect("Error saving new post");
+    Ok(Created::new("/").body(post))
 }
 
 #[post("/add_pair")]
@@ -138,10 +153,10 @@ async fn sync_pair() -> Result<String, String> {
 async fn main() {
     let state = AppState::new().await;
 
-    rocket::build()
-        .manage(Mutex::new(state))
-        .mount("/", routes![call_contract, hello_world])
-        .launch()
-        .await
-        .expect("Failed to launch the server");
+    // rocket::build()
+    //     .manage(Mutex::new(state))
+    //     .mount("/", routes![call_contract, hello_world])
+    //     .launch()
+    //     .await
+    //     .expect("Failed to launch the server");
 }
