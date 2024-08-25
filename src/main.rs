@@ -9,8 +9,10 @@ use ethers::types::Address;
 use k256::elliptic_curve::rand_core::block;
 use rocket::serde::{json::Json, Deserialize, Serialize};
 use rocket::State;
+use rocket::response::status;
 use std::env;
 use std::sync::Arc;
+use diesel::RunQueryDsl;
 use rocket::response::status::Created;
 use tokio::sync::Mutex;
 
@@ -104,11 +106,11 @@ async fn call_contract(
 }
 
 #[post("/add_token", format = "json", data = "<post>")]
-pub fn create_post(post: Json<NewToken>) -> Result<Created<Json<NewToken>>> {
-
+pub fn add_token(post: Json<Token>) -> Result<Created<Json<Token>>, status::Custom<Json<String>>> {
+    println!("Request: {:?}", post);
     let connection = &mut establish_connection_pg();
 
-    let new_post = Token {
+    let new_token = Token {
         id: 0,
         name: post.name.clone(),
         symbol: post.symbol.clone(),
@@ -117,8 +119,8 @@ pub fn create_post(post: Json<NewToken>) -> Result<Created<Json<NewToken>>> {
         block: post.block,
     };
 
-    diesel::insert_into(self::schema::posts::dsl::posts)
-        .values(&new_post)
+    diesel::insert_into(db::schema::tokens::table)
+        .values(&new_token)
         .execute(connection)
         .expect("Error saving new post");
     Ok(Created::new("/").body(post))
@@ -160,7 +162,7 @@ async fn main() {
 
     rocket::build()
         .manage(Mutex::new(state))
-        .mount("/", routes![call_contract, hello_world])
+        .mount("/", routes![add_token])
         .launch()
         .await
         .expect("Failed to launch the server");

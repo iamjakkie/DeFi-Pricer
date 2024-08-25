@@ -5,9 +5,9 @@ use bigdecimal::BigDecimal;
 use diesel::data_types::PgNumeric;
 use crate::schema::{tokens, pairs, trades, prices};
 // Queryable will generate the code needed to load the struct from an SQL statement
-#[derive(Debug, Serialize, Deserialize, Queryable, QueryableByName)]
+#[derive(Debug, Serialize, Deserialize, Queryable, QueryableByName, Insertable)]
 pub struct Token {
-    pub id: i32,
+    pub id: Option<i32>,
     pub name: String,
     pub symbol: String,
     pub decimals: i32,
@@ -15,7 +15,7 @@ pub struct Token {
     pub block: i32,
 }
 
-#[derive(Insertable)]
+#[derive(Insertable, Debug)]
 #[diesel(table_name = tokens)]
 pub struct NewToken {
     pub name: String,
