@@ -11,9 +11,12 @@ use rocket::serde::{json::Json, Deserialize, Serialize};
 use rocket::State;
 use std::env;
 use std::sync::Arc;
+use rocket::response::status::Created;
 use tokio::sync::Mutex;
 
 use DeFi_Pricer::ContractCallRequest;
+use db::models::{NewToken, Token};
+use db::connection::establish_connection_pg;
 
 
 
@@ -101,15 +104,17 @@ async fn call_contract(
 }
 
 #[post("/add_token", format = "json", data = "<post>")]
-pub fn create_post(post: Json<NewToken>) -> Result<Created<Json<NewPost>>> {
+pub fn create_post(post: Json<NewToken>) -> Result<Created<Json<NewToken>>> {
 
     let connection = &mut establish_connection_pg();
 
-    let new_post = Post {
-        id: 1,
-        title: post.title.to_string(),
-        body: post.body.to_string(),
-        published: true,
+    let new_post = Token {
+        id: 0,
+        name: post.name.clone(),
+        symbol: post.symbol.clone(),
+        decimals: post.decimals,
+        total_supply: post.total_supply,
+        block: post.block,
     };
 
     diesel::insert_into(self::schema::posts::dsl::posts)
@@ -153,10 +158,10 @@ async fn sync_pair() -> Result<String, String> {
 async fn main() {
     let state = AppState::new().await;
 
-    // rocket::build()
-    //     .manage(Mutex::new(state))
-    //     .mount("/", routes![call_contract, hello_world])
-    //     .launch()
-    //     .await
-    //     .expect("Failed to launch the server");
+    rocket::build()
+        .manage(Mutex::new(state))
+        .mount("/", routes![call_contract, hello_world])
+        .launch()
+        .await
+        .expect("Failed to launch the server");
 }
