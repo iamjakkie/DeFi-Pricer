@@ -17,7 +17,7 @@ use rocket::response::status::Created;
 use tokio::sync::Mutex;
 
 use DeFi_Pricer::ContractCallRequest;
-use db::models::{NewToken, Token};
+use db::models::{Token, Pair};
 use db::connection::establish_connection_pg;
 
 
@@ -107,7 +107,6 @@ async fn call_contract(
 
 #[post("/add_token", format = "json", data = "<post>")]
 pub fn add_token(post: Json<Token>) -> Result<Created<Json<Token>>, status::Custom<Json<String>>> {
-    println!("Request: {:?}", post);
     let connection = &mut establish_connection_pg();
 
     let new_token = Token {
@@ -122,14 +121,28 @@ pub fn add_token(post: Json<Token>) -> Result<Created<Json<Token>>, status::Cust
     diesel::insert_into(db::schema::tokens::table)
         .values(&new_token)
         .execute(connection)
-        .expect("Error saving new post");
+        .expect("Error saving new token");
     Ok(Created::new("/").body(post))
 }
 
-#[post("/add_pair")]
-async fn add_pair() -> Result<String, String> {
+#[post("/add_pair", format = "json", data = "<post>")]
+async fn add_pair(post: Json<Pair>) -> Result<Created<Json<Pair>>, status::Custom<Json<String>>> {
     // this should add a pair to a database with basic information
-    Ok("boo!".to_string())
+    let connection = &mut establish_connection_pg();
+
+    let new_pair = Pair {
+        id: None,
+        token0: post.token0.clone(),
+        token1: post.token1.clone(),
+        pair: post.pair.clone(),
+        block: post.block,
+    };
+
+    diesel::insert_into(db::schema::pairs::table)
+        .values(&new_pair)
+        .execute(connection)
+        .expect("Error saving new pair");
+    Ok(Created::new("/").body(post))
 }
 
 #[post("/add_trade")]
@@ -157,7 +170,7 @@ async fn sync_pair() -> Result<String, String> {
 // 'Error: Expected `U256`, got Tuple([Uint(2226262424639007986121597746328), Uint(7052167907527757790769), Uint(1722970811)])'
 
 #[rocket::main]
-async fn main() {
+async fn main() -> Result<(), anyhow::Error> {
     let state = AppState::new().await;
 
     rocket::build()
@@ -166,4 +179,6 @@ async fn main() {
         .launch()
         .await
         .expect("Failed to launch the server");
+
+    Ok(())
 }

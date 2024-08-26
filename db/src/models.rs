@@ -27,7 +27,7 @@ pub struct NewToken {
 
 #[derive(Debug, Serialize, Deserialize, Queryable, QueryableByName)]
 pub struct Pair {
-    pub id: i32,
+    pub id: Option<i32>,
     pub token0: String,
     pub token1: String,
     pub pair: String,
@@ -63,7 +63,7 @@ pub struct NewTrade {
     pub amount_in: i64,
     pub amount_out: i64,
     pub fees: i64,
-    pub change : BigDecimal,
+    pub change: BigDecimal,
     pub block: i32,
 }
 
